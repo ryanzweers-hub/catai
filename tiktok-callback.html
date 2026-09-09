@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>catai TikTok sign-in</title>
+<style>body{margin:0;background:#0b0b0c;color:#f2f2f2;font:17px/1.6 Georgia,serif}main{max-width:640px;margin:14vh auto;padding:0 24px}h1{font-size:32px;margin:0 0 8px}p{color:#bdbdbd}code{display:block;word-break:break-all;background:#141416;padding:12px;border-radius:8px;color:#f2f2f2;font-size:14px}button{font:inherit;padding:8px 14px;border:0;border-radius:6px;background:#f2f2f2;color:#0b0b0c;cursor:pointer}a{color:#f2f2f2}</style></head>
+<body><main><h1>Signing in</h1>
+<p id="msg">Handing the authorization back to the catai publishing tool on this computer.</p>
+<div id="fallback" hidden>
+<p>The local tool did not pick this up. Copy the code below and run <code style="display:inline;padding:2px 6px">node scripts/tiktok/auth.mjs --code &lt;code&gt;</code></p>
+<code id="code"></code><p><button id="copy">Copy code</button></p>
+</div>
+<script>
+// TikTok requires an https redirect URI (developers.tiktok.com/doc/login-kit-web), so this static page is the
+// registered redirect. It forwards TikTok's query string (code, scopes, state) to the local listener that
+// scripts/tiktok/auth.mjs runs on 127.0.0.1. Nothing is stored or sent anywhere else.
+(function () {
+  var q = new URLSearchParams(location.search);
+  var port = q.get('port') || localStorage.getItem('tiktokAuthPort') || '8765';
+  var code = q.get('code');
+  var err = q.get('error');
+  var msg = document.getElementById('msg');
+  if (err) { msg.textContent = 'TikTok returned an error: ' + err + ' ' + (q.get('error_description') || ''); return; }
+  if (!code) { msg.textContent = 'No authorization code in this URL. Start again from auth.mjs.'; return; }
+  document.getElementById('code').textContent = code;
+  document.getElementById('copy').onclick = function () { navigator.clipboard.writeText(code); this.textContent = 'Copied'; };
+  var local = 'http://127.0.0.1:' + port + '/callback?' + q.toString();
+  var shown = setTimeout(function () { document.getElementById('fallback').hidden = false; msg.textContent = 'Could not reach the local tool.'; }, 2500);
+  // Browsers allow a top-level navigation from https to http://127.0.0.1; only fetch/XHR would be blocked as mixed content.
+  location.replace(local);
+  window.addEventListener('pagehide', function () { clearTimeout(shown); });
+})();
+</script></main></body></html>
